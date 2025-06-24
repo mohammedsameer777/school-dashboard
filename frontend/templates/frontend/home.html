@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Teacher & Student Dashboard</title>
+  <style>
+    ul { list-style-type: none; padding: 0; }
+    li { display: inline-block; margin: 10px; }
+    a { text-decoration: none; font-weight: bold; }
+    section { margin-top: 30px; }
+    button { margin-left: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Welcome to the School Management System</h1>
+
+  <ul>
+    <li><a href="#" onclick="showSection('register')">Register</a></li>
+    <li><a href="#" onclick="showSection('login')">Login</a></li>
+    <li><a href="#" onclick="showSection('profile')">Profile</a></li>
+    <li><a href="#" onclick="showSection('addStudent')">Add Student</a></li>
+    <li><a href="#" onclick="showSection('viewStudents')">View Students</a></li>
+    <li><a href="#" onclick="logout()">Logout</a></li>
+  </ul>
+
+  <section id="register" style="display:none;">
+    <h2>Teacher Register</h2>
+    <form id="registerForm">
+      <input type="email" placeholder="Email" name="email" required><br>
+      <input type="text" placeholder="Name" name="name" required><br>
+      <input type="password" placeholder="Password" name="password" required><br>
+      <button type="submit">Register</button>
+    </form>
+  </section>
+
+  <section id="login" style="display:none;">
+    <h2>Teacher Login</h2>
+    <form id="loginForm">
+      <input type="email" placeholder="Email" name="email" required><br>
+      <input type="password" placeholder="Password" name="password" required><br>
+      <button type="submit">Login</button>
+    </form>
+  </section>
+
+  <section id="profile" style="display:none;">
+    <h2>Profile</h2>
+    <pre id="profileData">Not loaded</pre>
+  </section>
+
+  <section id="addStudent" style="display:none;">
+    <h2>Add Student</h2>
+    <form id="studentForm">
+      <input type="text" name="name" placeholder="Name" required><br>
+      <input type="number" name="age" placeholder="Age" required><br>
+      <input type="text" name="rrn" placeholder="RRN" required><br>
+      <input type="text" name="address" placeholder="Address" required><br>
+      <input type="number" name="marks" placeholder="Marks" required><br>
+      <button type="submit">Add</button>
+    </form>
+  </section>
+
+  <section id="viewStudents" style="display:none;">
+    <h2>Students</h2>
+    <ul id="studentList"></ul>
+  </section>
+
+  <script>
+    const apiBase = 'https://dc59-2405-201-e022-90ed-45b0-411b-e432-3748.ngrok-free.app/api';
+
+    function showSection(id) {
+      document.querySelectorAll("section").forEach(s => s.style.display = "none");
+      document.getElementById(id).style.display = "block";
+      if (id === "profile") loadProfile();
+      if (id === "viewStudents") loadStudents();
+    }
+
+    document.getElementById('registerForm').onsubmit = async e => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        email: form.email.value,
+        name: form.name.value,
+        password: form.password.value,
+      };
+      try {
+        const res = await fetch(`${apiBase}/register/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const responseData = await res.json();
+        if (res.ok) alert('Registered!');
+        else alert('Failed: ' + (responseData.error || 'Unknown error'));
+      } catch (err) {
+        alert('Network or CORS error: ' + err.message);
+      }
+    };
+
+    document.getElementById('loginForm').onsubmit = async e => {
+      e.preventDefault();
+      const form = e.target;
+      try {
+        const res = await fetch(`${apiBase}/login/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: form.email.value,
+            password: form.password.value
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('access', data.access);
+          localStorage.setItem('refresh', data.refresh);
+          alert('Logged in!');
+          showSection('profile');
+        } else {
+          alert('Login failed: ' + (data.detail || 'Invalid credentials'));
+        }
+      } catch (err) {
+        alert('Login error: ' + err.message);
+      }
+    };
+
+    async function loadProfile() {
+      const token = localStorage.getItem('access');
+      if (!token) {
+        alert("You're not logged in!");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${apiBase}/profile/`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Failed to load profile. Status: ${res.status}\n${errorText}`);
+        }
+
+        const data = await res.json();
+        document.getElementById('profileData').innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        alert('Error loading profile: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    document.getElementById('studentForm').onsubmit = async e => {
+      e.preventDefault();
+      const form = e.target;
+      const token = localStorage.getItem('access');
+      const data = {
+        name: form.name.value,
+        age: form.age.value,
+        rrn: form.rrn.value,
+        address: form.address.value,
+        marks: form.marks.value
+      };
+      try {
+        const res = await fetch(`${apiBase}/students/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(data)
+        });
+        const response = await res.json();
+        if (res.ok) {
+          alert('Student added!');
+        } else {
+          alert('Failed to add student: ' + (response.detail || JSON.stringify(response)));
+        }
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      }
+    };
+
+    async function loadStudents() {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${apiBase}/students/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const students = await res.json();
+      const list = document.getElementById('studentList');
+      list.innerHTML = '';
+      students.forEach(s => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          ${s.name} (${s.age}) - ${s.rrn} - ${s.marks} marks
+          <button onclick="editStudent(${s.id})">Edit</button>
+          <button onclick="deleteStudent(${s.id})">Delete</button>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    async function deleteStudent(id) {
+      const token = localStorage.getItem('access');
+      if (confirm('Are you sure?')) {
+        const res = await fetch(`${apiBase}/students/${id}/`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          alert('Deleted!');
+          loadStudents();
+        } else alert('Delete failed');
+      }
+    }
+
+    async function editStudent(id) {
+      const token = localStorage.getItem('access');
+      const updatedData = {
+        name: prompt('New name:'),
+        age: prompt('New age:'),
+        rrn: prompt('New RRN:'),
+        address: prompt('New address:'),
+        marks: prompt('New marks:')
+      };
+      const res = await fetch(`${apiBase}/students/${id}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedData)
+      });
+      if (res.ok) {
+        alert('Updated!');
+        loadStudents();
+      } else alert('Update failed');
+    }
+
+    function logout() {
+      localStorage.clear();
+      alert('Logged out!');
+    }
+  </script>
+</body>
+</html>
