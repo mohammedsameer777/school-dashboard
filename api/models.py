@@ -15,6 +15,7 @@ class Teacher(AbstractBaseUser):
     name = models.CharField(max_length=100)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['name']
+
     objects = TeacherManager()
 
     def __str__(self):
@@ -27,3 +28,13 @@ class Student(models.Model):
     rrn = models.CharField(max_length=50)
     address = models.TextField()
     marks = models.IntegerField()
+
+# serializers.py
+from rest_framework import serializers
+from .models import Student
+
+class StudentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Student
+        fields = '__all__'
+        read_only_fields = ['teacher']

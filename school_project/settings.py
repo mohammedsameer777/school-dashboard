@@ -6,7 +6,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'your-secret-key'
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1','https://dc59-2405-201-e022-90ed-45b0-411b-e432-3748.ngrok-free.app']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1','678a-2405-201-e022-90ed-11c2-7e7-7689-617e.ngrok-free.app']
+
 
 INSTALLED_APPS = [
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',
